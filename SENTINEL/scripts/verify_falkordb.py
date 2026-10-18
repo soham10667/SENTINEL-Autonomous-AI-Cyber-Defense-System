@@ -3,7 +3,12 @@ import os
 
 # Add backend directory to path
 backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "backend"))
-sys.path.insert(0, backend_dir)
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
+
+venv_site = os.path.join(backend_dir, "venv", "Lib", "site-packages")
+if os.path.exists(venv_site) and venv_site not in sys.path:
+    sys.path.insert(0, venv_site)
 
 from app.database.falkor import get_db_manager
 

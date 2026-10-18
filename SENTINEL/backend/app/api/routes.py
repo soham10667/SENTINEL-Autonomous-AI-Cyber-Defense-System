@@ -16,6 +16,7 @@ from app.agents.risk_engine import evaluate_counterfactual_containment
 from app.simulation.scenarios import (
     launch_scenario_a, launch_scenario_b, launch_scenario_c, reset_simulation_state
 )
+from app.simulation.seed_data import seed_enterprise_graph
 from app.services.event_bus import get_event_bus
 
 logger = logging.getLogger("sentinel.api.routes")
@@ -105,13 +106,29 @@ def get_dashboard_summary():
         """)
         recent_events = [SecurityEvent(**ev) for ev in events_res]
 
+        # Dynamic Risk Distribution computed from live graph nodes
+        risk_distribution = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
+        try:
+            risk_cypher = """
+            MATCH (n)
+            WITH coalesce(n.criticality, n.severity, CASE WHEN n.risk_score > 15 THEN 'HIGH' WHEN n.risk_score > 0 THEN 'MEDIUM' ELSE 'LOW' END) AS risk_level
+            RETURN risk_level, count(*) AS count
+            """
+            risk_res = db.query(risk_cypher)
+            for r in risk_res:
+                lvl = str(r.get("risk_level", "")).upper()
+                if lvl in risk_distribution:
+                    risk_distribution[lvl] += r.get("count", 0)
+        except Exception as re:
+            logger.debug(f"Risk distribution calculation notice: {re}")
+
         return DashboardSummary(
             total_assets=total_assets,
             active_incidents=active_incidents,
             critical_alerts=critical_alerts,
             suspicious_identities=suspicious_identities,
             compromised_devices=compromised_devices,
-            risk_distribution={"CRITICAL": 2, "HIGH": 4, "MEDIUM": 8, "LOW": 14},
+            risk_distribution=risk_distribution,
             investigations_in_progress=len([inv for inv in INVESTIGATIONS_CACHE.values() if inv.status == "IN_PROGRESS"]),
             containment_actions_count=containment_count,
             recent_events=recent_events
@@ -121,6 +138,13 @@ def get_dashboard_summary():
         raise HTTPException(status_code=500, detail=str(e))
 
 # ----------------- GRAPH API ENDPOINTS (TASKS 3 & 4) -----------------
+
+class SwitchGraphRequest(BaseModel):
+    graph_name: str
+
+class SeedGraphRequest(BaseModel):
+    force_reset: bool = False
+    target_graph: str = "sentinel"
 
 class CreateNodeRequest(BaseModel):
     label: str
@@ -138,15 +162,82 @@ def get_graph_health():
     db = get_db_manager()
     return db.check_health()
 
+@router.get("/graph/list")
+def list_graphs():
+    """Lists all available graphs in FalkorDB with their current node/relationship counts."""
+    db = get_db_manager()
+    if not db.is_connected():
+        raise HTTPException(
+            status_code=503,
+            detail=f"FalkorDB is offline or unreachable at {db.host}:{db.port}. Please verify the FalkorDB container is running."
+        )
+    return {
+        "active_graph": db.graph_name,
+        "graphs": db.list_graphs()
+    }
+
+@router.post("/graph/switch")
+def switch_graph(req: SwitchGraphRequest):
+    """Switch active FalkorDB graph dynamically without server restart."""
+    db = get_db_manager()
+    if not db.is_connected():
+        raise HTTPException(
+            status_code=503,
+            detail=f"FalkorDB is offline or unreachable at {db.host}:{db.port}."
+        )
+    try:
+        db.select_graph(req.graph_name)
+        health = db.check_health()
+        return {
+            "status": "SUCCESS",
+            "active_graph": db.graph_name,
+            "database": health
+        }
+    except Exception as e:
+        logger.error(f"Error switching graph: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/graph/seed")
+def seed_graph(req: Optional[SeedGraphRequest] = None):
+    """
+    Safely and idempotently seed the enterprise graph in FalkorDB using MERGE.
+    Preserves all existing data and guarantees non-target graphs like 'hackathon' are untouched.
+    """
+    db = get_db_manager()
+    if not db.is_connected():
+        raise HTTPException(
+            status_code=503,
+            detail=f"FalkorDB is offline or unreachable at {db.host}:{db.port}."
+        )
+    force_reset = req.force_reset if req else False
+    target_graph = req.target_graph if req else "sentinel"
+    
+    if target_graph.lower() == "hackathon":
+        raise HTTPException(status_code=400, detail="Cannot seed or overwrite protected graph 'hackathon'.")
+
+    success = seed_enterprise_graph(force_reset=force_reset, target_graph=target_graph)
+    health = db.check_health()
+    return {
+        "status": "SUCCESS" if success else "FAILED",
+        "graph": target_graph,
+        "database": health
+    }
+
 @router.get("/graph/visualization", response_model=GraphData)
 def get_graph_visualization():
-    """Returns complete graph nodes and edges for visualization rendering."""
+    """Returns complete graph nodes and edges for visualization rendering from FalkorDB."""
+    db = get_db_manager()
+    if not db.is_connected():
+        raise HTTPException(
+            status_code=503,
+            detail=f"FalkorDB is offline or unreachable at {db.host}:{db.port}. Cannot fetch graph visualization."
+        )
     return fetch_graph_overview()
 
 @router.get("/graph/overview", response_model=GraphData)
 def get_graph_overview():
     """Alias for graph visualization."""
-    return fetch_graph_overview()
+    return get_graph_visualization()
 
 @router.get("/graph/nodes")
 def get_graph_nodes(

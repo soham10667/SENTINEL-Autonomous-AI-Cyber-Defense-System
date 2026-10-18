@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     LLM_API_KEY: str = Field(default="", env="LLM_API_KEY")
     LLM_BASE_URL: str = Field(default="https://api.openai.com/v1", env="LLM_BASE_URL")
     LLM_MODEL: str = Field(default="gpt-4o-mini", env="LLM_MODEL")
+    
+    JWT_SECRET: str = Field(default="sentinel-super-secret-key-change-in-prod-falkordb-2026", env="JWT_SECRET")
 
     class Config:
         env_file = ".env"

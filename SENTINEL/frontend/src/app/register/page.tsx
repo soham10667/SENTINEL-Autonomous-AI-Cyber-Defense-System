@@ -2,24 +2,37 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Shield, Eye, EyeOff, Lock, Mail, User, AlertCircle, CheckCircle, Activity, BadgeCheck } from 'lucide-react';
+import {
+  Shield,
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  User,
+  AlertCircle,
+  CheckCircle2,
+  ArrowRight,
+  Home
+} from 'lucide-react';
+import { api, setStoredAuth } from '../../lib/api';
 
 export default function RegisterPage() {
-  const [form, setForm] = useState({
-    fullName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    clearanceLevel: 'analyst',
-  });
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const passwordStrength = (pw: string) => {
-    if (!pw) return 0;
+  const validateEmail = (val: string) => {
+    return /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/.test(val);
+  };
+
+  const calculatePasswordStrength = (pw: string) => {
     let score = 0;
     if (pw.length >= 8) score++;
     if (/[A-Z]/.test(pw)) score++;
@@ -28,271 +41,292 @@ export default function RegisterPage() {
     return score;
   };
 
-  const strength = passwordStrength(form.password);
-  const strengthLabel = ['', 'Weak', 'Fair', 'Good', 'Strong'][strength];
-  const strengthColor = ['', 'bg-red-500', 'bg-orange-400', 'bg-yellow-400', 'bg-emerald-500'][strength];
+  const strength = calculatePasswordStrength(password);
+  const strengthLabels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+  const strengthColors = ['', 'bg-rose-400', 'bg-amber-400', 'bg-emerald-400', 'bg-[#10b981]'];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!form.fullName || !form.email || !form.password || !form.confirmPassword) {
-      setError('All fields are required.');
+
+    const cleanName = fullName.trim();
+    const cleanEmail = email.trim();
+
+    if (!cleanName || !cleanEmail || !password || !confirmPassword) {
+      setError('Please complete all required fields.');
       return;
     }
-    if (form.password !== form.confirmPassword) {
-      setError('Passwords do not match.');
+
+    if (!validateEmail(cleanEmail)) {
+      setError('Please enter a valid email address.');
       return;
     }
-    if (form.password.length < 8) {
-      setError('Password must be at least 8 characters.');
+
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long.');
       return;
     }
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+
+    if (password !== confirmPassword) {
+      setError('Password and Confirm Password do not match.');
+      return;
+    }
+
+    if (!termsAccepted) {
+      setError('You must accept the terms of service and operator guidelines.');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const res = await api.register(cleanName, cleanEmail, password, 'operator');
+      setStoredAuth(res.access_token, res.user);
       setSuccess(true);
-    }, 2000);
+    } catch (err: any) {
+      setError(err?.message || 'Registration failed. Email may already be in use.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#f5f0e8] flex items-center justify-center relative overflow-hidden py-10">
-
-      {/* Animated Background */}
-      <div className="absolute inset-0 cyber-grid opacity-60" />
-      <div className="absolute top-1/3 left-1/4 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute bottom-1/3 right-1/4 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl animate-pulse delay-700" />
-
-      <style jsx>{`
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(24px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .fade-in-up { animation: fadeInUp 0.6s ease forwards; }
-        @keyframes scanline {
-          0% { top: -2px; }
-          100% { top: 100%; }
-        }
-      `}</style>
-
-      {/* Scanline */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute w-full h-[2px] bg-gradient-to-r from-transparent via-emerald-500/15 to-transparent top-0 animate-[scanline_5s_linear_infinite]" />
+    <div className="min-h-screen w-full bg-[#f5f0e8] text-[#2c2825] cyber-grid flex flex-col justify-between py-8 px-4 sm:px-6 lg:px-8">
+      {/* Top Header Link */}
+      <div className="w-full max-w-lg mx-auto flex items-center justify-between mb-4">
+        <Link href="/" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#7a6f63] hover:text-[#10b981] transition-colors">
+          <Home className="w-3.5 h-3.5" />
+          <span>Back to Landing Page</span>
+        </Link>
+        <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-[#10b981] bg-[#ede8dc] px-2.5 py-1 rounded-full border border-[#d9d0c0]">
+          <Shield className="w-3.5 h-3.5 text-[#10b981]" />
+          <span>SENTINEL</span>
+        </div>
       </div>
 
-      <div className="relative z-10 w-full max-w-lg px-6">
-
-        {/* Success State */}
-        {success ? (
-          <div className="fade-in-up text-center">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-[#d4ede3] border border-[#10b981] shadow-[0_0_40px_rgba(16,185,129,0.3)] mb-6">
-              <CheckCircle className="w-10 h-10 text-[#10b981]" />
-            </div>
-            <h2 className="text-2xl font-bold text-[#2c2825] mb-2">Access Request Submitted</h2>
-            <p className="text-[#7a6f63] text-sm font-mono mb-2">Your operator credentials have been registered.</p>
-            <p className="text-[#7a6f63] text-xs font-mono mb-8">Clearance verification will be processed by command.</p>
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#10b981] text-[#f5f0e8] font-bold text-sm font-mono hover:bg-[#059669] transition-all shadow-[0_4px_20px_rgba(16,185,129,0.3)]"
-            >
-              <Shield className="w-4 h-4" />
-              PROCEED TO LOGIN
-            </Link>
-          </div>
-        ) : (
-          <>
-            {/* Logo */}
-            <div className="text-center mb-7 fade-in-up">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#d4ede3] border border-[#10b981] shadow-[0_0_30px_rgba(16,185,129,0.2)] mb-3">
-                <Shield className="w-7 h-7 text-[#10b981]" />
+      {/* Main Register Card */}
+      <div className="w-full max-w-lg mx-auto my-auto">
+        <div className="bg-[#ede8dc] border border-[#d9d0c0] rounded-2xl p-7 sm:p-9 shadow-sm space-y-6">
+          {success ? (
+            /* Registration Success View */
+            <div className="text-center py-6 space-y-4">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#d4ede3] border border-[#10b981] text-[#10b981] mb-2 shadow-sm">
+                <CheckCircle2 className="w-9 h-9" />
               </div>
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <h1 className="text-xl font-bold text-[#2c2825] tracking-widest">SENTINEL</h1>
-                <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded bg-[#ede8dc] border border-[#d9d0c0] text-[#10b981] font-bold">v2.0</span>
-              </div>
-              <p className="text-[#7a6f63] text-xs font-mono">Operator Clearance Registration</p>
-              <div className="flex items-center justify-center gap-1.5 mt-1.5">
-                <Activity className="w-3 h-3 text-[#10b981] animate-pulse" />
-                <span className="text-[10px] text-[#10b981] font-mono uppercase tracking-wider">Secure Enrollment Portal</span>
+              <h2 className="text-2xl font-extrabold text-[#2c2825]">Operator Registered</h2>
+              <p className="text-xs text-[#7a6f63] max-w-sm mx-auto leading-relaxed">
+                Your account for <strong>{email}</strong> has been created in FalkorDB. Your operator session is ready.
+              </p>
+              <div className="pt-4 flex flex-col sm:flex-row gap-3 justify-center">
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white bg-[#10b981] hover:bg-[#059669] transition-all shadow-sm"
+                >
+                  <span>Enter SENTINEL Dashboard</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
               </div>
             </div>
-
-            {/* Register Card */}
-            <div
-              className="fade-in-up bg-[#ede8dc]/90 backdrop-blur-xl border border-[#d9d0c0] rounded-2xl p-8 shadow-[0_0_60px_rgba(0,0,0,0.5),0_0_30px_rgba(16,185,129,0.05)]"
-              style={{ animationDelay: '0.1s' }}
-            >
-              <div className="mb-6">
-                <h2 className="text-lg font-bold text-[#2c2825] mb-1">Create Operator Account</h2>
-                <p className="text-[#7a6f63] text-xs font-mono">Register for access to the SENTINEL defense console</p>
+          ) : (
+            /* Registration Form View */
+            <>
+              {/* Heading */}
+              <div className="text-center space-y-2">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[#d4ede3] border border-[#10b981] text-[#10b981] shadow-sm mb-1">
+                  <Shield className="w-6 h-6" />
+                </div>
+                <h1 className="text-2xl font-extrabold tracking-tight text-[#2c2825]">
+                  Create Operator Account
+                </h1>
+                <p className="text-xs text-[#7a6f63]">
+                  Join the SENTINEL autonomous cyber defense grid.
+                </p>
               </div>
 
+              {/* Error Banner */}
               {error && (
-                <div className="flex items-center gap-2 p-3 mb-5 rounded-xl bg-red-900/20 border border-red-800/50 text-red-400 text-xs font-mono">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  {error}
+                <div className="p-3 rounded-xl bg-red-50 border border-red-200 flex items-start gap-2 text-xs text-red-800">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                  <span>{error}</span>
                 </div>
               )}
 
+              {/* Form */}
               <form onSubmit={handleSubmit} className="space-y-4">
-
                 {/* Full Name */}
                 <div>
-                  <label className="block text-[11px] font-mono uppercase tracking-wider text-[#7a6f63] mb-1.5">Full Name</label>
+                  <label className="block text-xs font-semibold text-[#2c2825] mb-1.5">
+                    Operator Full Name
+                  </label>
                   <div className="relative">
                     <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7a6f63]" />
                     <input
                       id="register-name"
                       type="text"
-                      value={form.fullName}
-                      onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+                      required
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
                       placeholder="Sarah Connor"
-                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#f5f0e8] border border-[#d9d0c0] text-[#2c2825] placeholder-[#a09080] text-sm font-mono focus:outline-none focus:border-[#10b981] focus:shadow-[0_0_0_3px_rgba(16,185,129,0.1)] transition-all"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#e8e2d6] border border-[#d9d0c0] text-sm text-[#2c2825] placeholder-[#7a6f63] focus:outline-none focus:border-[#10b981] focus:ring-1 focus:ring-[#10b981] transition-all"
                     />
                   </div>
                 </div>
 
-                {/* Email */}
+                {/* Email Address */}
                 <div>
-                  <label className="block text-[11px] font-mono uppercase tracking-wider text-[#7a6f63] mb-1.5">Operator Email</label>
+                  <label className="block text-xs font-semibold text-[#2c2825] mb-1.5">
+                    Work Email Address
+                  </label>
                   <div className="relative">
                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7a6f63]" />
                     <input
                       id="register-email"
                       type="email"
-                      value={form.email}
-                      onChange={(e) => setForm({ ...form, email: e.target.value })}
-                      placeholder="operator@sentinel.gov"
-                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#f5f0e8] border border-[#d9d0c0] text-[#2c2825] placeholder-[#a09080] text-sm font-mono focus:outline-none focus:border-[#10b981] focus:shadow-[0_0_0_3px_rgba(16,185,129,0.1)] transition-all"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="sarah.connor@sentinel.internal"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#e8e2d6] border border-[#d9d0c0] text-sm text-[#2c2825] placeholder-[#7a6f63] focus:outline-none focus:border-[#10b981] focus:ring-1 focus:ring-[#10b981] transition-all"
                     />
-                  </div>
-                </div>
-
-                {/* Clearance Level */}
-                <div>
-                  <label className="block text-[11px] font-mono uppercase tracking-wider text-[#7a6f63] mb-1.5">Clearance Level</label>
-                  <div className="relative">
-                    <BadgeCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7a6f63]" />
-                    <select
-                      id="register-clearance"
-                      value={form.clearanceLevel}
-                      onChange={(e) => setForm({ ...form, clearanceLevel: e.target.value })}
-                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#f5f0e8] border border-[#d9d0c0] text-[#2c2825] text-sm font-mono focus:outline-none focus:border-[#10b981] focus:shadow-[0_0_0_3px_rgba(16,185,129,0.1)] transition-all appearance-none cursor-pointer"
-                    >
-                      <option value="analyst">Analyst — Read Only</option>
-                      <option value="operator">Operator — Standard Access</option>
-                      <option value="admin">Admin — Full Command</option>
-                    </select>
                   </div>
                 </div>
 
                 {/* Password */}
                 <div>
-                  <label className="block text-[11px] font-mono uppercase tracking-wider text-[#7a6f63] mb-1.5">Access Code</label>
+                  <label className="block text-xs font-semibold text-[#2c2825] mb-1.5">
+                    Password (Min. 8 characters)
+                  </label>
                   <div className="relative">
                     <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7a6f63]" />
                     <input
                       id="register-password"
                       type={showPassword ? 'text' : 'password'}
-                      value={form.password}
-                      onChange={(e) => setForm({ ...form, password: e.target.value })}
-                      placeholder="Min. 8 characters"
-                      className="w-full pl-10 pr-12 py-3 rounded-xl bg-[#f5f0e8] border border-[#d9d0c0] text-[#2c2825] placeholder-[#a09080] text-sm font-mono focus:outline-none focus:border-[#10b981] focus:shadow-[0_0_0_3px_rgba(16,185,129,0.1)] transition-all"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••••••"
+                      className="w-full pl-10 pr-11 py-2.5 rounded-xl bg-[#e8e2d6] border border-[#d9d0c0] text-sm text-[#2c2825] placeholder-[#7a6f63] focus:outline-none focus:border-[#10b981] focus:ring-1 focus:ring-[#10b981] transition-all"
                     />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#7a6f63] hover:text-[#10b981] transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#7a6f63] hover:text-[#2c2825] transition-colors"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
-                  {/* Strength Bar */}
-                  {form.password && (
-                    <div className="mt-2">
-                      <div className="flex gap-1 mb-1">
-                        {[1, 2, 3, 4].map((i) => (
-                          <div key={i} className={`h-1 flex-1 rounded-full transition-all ${i <= strength ? strengthColor : 'bg-[#d9d0c0]'}`} />
+
+                  {/* Password Strength Indicator */}
+                  {password && (
+                    <div className="mt-2 space-y-1">
+                      <div className="flex gap-1 h-1">
+                        {[1, 2, 3, 4].map((step) => (
+                          <div
+                            key={step}
+                            className={`flex-1 rounded-full transition-all ${
+                              step <= strength ? strengthColors[strength] : 'bg-[#d9d0c0]'
+                            }`}
+                          />
                         ))}
                       </div>
-                      <span className="text-[10px] font-mono text-[#7a6f63]">Strength: <span className={strength >= 3 ? 'text-emerald-400' : strength === 2 ? 'text-yellow-400' : 'text-red-400'}>{strengthLabel}</span></span>
+                      <div className="text-[10px] text-[#7a6f63] font-mono flex justify-between">
+                        <span>Strength: {strengthLabels[strength]}</span>
+                        <span>{password.length >= 8 ? 'Length OK' : 'Min 8 chars'}</span>
+                      </div>
                     </div>
                   )}
                 </div>
 
                 {/* Confirm Password */}
                 <div>
-                  <label className="block text-[11px] font-mono uppercase tracking-wider text-[#7a6f63] mb-1.5">Confirm Access Code</label>
+                  <label className="block text-xs font-semibold text-[#2c2825] mb-1.5">
+                    Confirm Password
+                  </label>
                   <div className="relative">
                     <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7a6f63]" />
                     <input
                       id="register-confirm-password"
                       type={showConfirm ? 'text' : 'password'}
-                      value={form.confirmPassword}
-                      onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-                      placeholder="Repeat access code"
-                      className={`w-full pl-10 pr-12 py-3 rounded-xl bg-[#f5f0e8] border text-[#2c2825] placeholder-[#a09080] text-sm font-mono focus:outline-none transition-all ${
-                        form.confirmPassword
-                          ? form.confirmPassword === form.password
-                            ? 'border-[#10b981] focus:shadow-[0_0_0_3px_rgba(16,185,129,0.1)]'
-                            : 'border-red-500/60 focus:shadow-[0_0_0_3px_rgba(239,68,68,0.1)]'
-                          : 'border-[#d9d0c0] focus:border-[#10b981] focus:shadow-[0_0_0_3px_rgba(16,185,129,0.1)]'
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••••••"
+                      className={`w-full pl-10 pr-11 py-2.5 rounded-xl bg-[#e8e2d6] border text-sm text-[#2c2825] placeholder-[#7a6f63] focus:outline-none transition-all ${
+                        confirmPassword
+                          ? confirmPassword === password
+                            ? 'border-[#10b981] focus:ring-1 focus:ring-[#10b981]'
+                            : 'border-red-400 focus:ring-1 focus:ring-red-400'
+                          : 'border-[#d9d0c0] focus:border-[#10b981] focus:ring-1 focus:ring-[#10b981]'
                       }`}
                     />
-                    <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#7a6f63] hover:text-[#10b981] transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirm(!showConfirm)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#7a6f63] hover:text-[#2c2825] transition-colors"
+                      aria-label={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
+                    >
                       {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
 
-                {/* Terms */}
-                <label className="flex items-start gap-2.5 text-xs font-mono text-[#7a6f63] cursor-pointer group mt-1">
-                  <input id="register-terms" type="checkbox" required className="mt-0.5 w-3.5 h-3.5 accent-[#10b981] rounded shrink-0" />
-                  <span className="group-hover:text-[#2c2825] transition-colors leading-relaxed">
-                    I agree to the SENTINEL{' '}
-                    <a href="#" className="text-[#10b981] hover:text-[#34d399]">Operator Terms of Service</a>{' '}
-                    and acknowledge all actions are logged.
-                  </span>
-                </label>
+                {/* Terms Acceptance */}
+                <div className="pt-1">
+                  <label className="flex items-start gap-2.5 text-xs text-[#7a6f63] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      required
+                      checked={termsAccepted}
+                      onChange={(e) => setTermsAccepted(e.target.checked)}
+                      className="w-4 h-4 mt-0.5 rounded text-[#10b981] focus:ring-[#10b981] border-[#d9d0c0]"
+                    />
+                    <span className="leading-relaxed">
+                      I agree to the{' '}
+                      <span className="text-[#10b981] font-semibold hover:underline">
+                        Operator Terms of Defense
+                      </span>{' '}
+                      and accept that all simulated mitigation actions are logged in FalkorDB.
+                    </span>
+                  </label>
+                </div>
 
-                {/* Submit */}
+                {/* Submit Button */}
                 <button
                   id="register-submit"
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-3 mt-1 rounded-xl bg-[#10b981] text-[#f5f0e8] font-bold text-sm tracking-wider font-mono hover:bg-[#059669] transition-all shadow-[0_4px_20px_rgba(16,185,129,0.3)] hover:shadow-[0_4px_30px_rgba(16,185,129,0.5)] hover:scale-[1.01] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
+                  className="w-full py-3 rounded-xl text-sm font-bold text-white bg-[#10b981] hover:bg-[#059669] hover:scale-[1.01] transition-all disabled:opacity-60 disabled:cursor-not-allowed shadow-sm flex items-center justify-center gap-2"
                 >
                   {isLoading ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-[#f5f0e8]/30 border-t-[#f5f0e8] rounded-full animate-spin" />
-                      REGISTERING OPERATOR...
+                      <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      <span>Creating Account in FalkorDB...</span>
                     </>
                   ) : (
                     <>
-                      <BadgeCheck className="w-4 h-4" />
-                      REQUEST ACCESS CLEARANCE
+                      <span>Create Operator Account</span>
+                      <ArrowRight className="w-4 h-4" />
                     </>
                   )}
                 </button>
               </form>
 
-              {/* Divider */}
-              <div className="flex items-center gap-3 my-5">
-                <div className="flex-1 h-px bg-[#d9d0c0]" />
-                <span className="text-[10px] text-[#a09080] font-mono uppercase tracking-wider">existing operator?</span>
-                <div className="flex-1 h-px bg-[#d9d0c0]" />
-              </div>
-
-              <p className="text-center text-xs font-mono text-[#7a6f63]">
-                Already have clearance?{' '}
-                <Link href="/login" className="text-[#10b981] hover:text-[#34d399] font-bold transition-colors">
-                  Sign in to console →
+              {/* Login Link */}
+              <div className="text-center text-xs text-[#7a6f63] pt-2 border-t border-[#d9d0c0]">
+                Already registered?{' '}
+                <Link href="/login" className="font-bold text-[#10b981] hover:underline">
+                  Sign in here &rarr;
                 </Link>
-              </p>
-            </div>
-
-            {/* Footer */}
-            <p className="text-center text-[10px] text-[#a09080] font-mono mt-5">
-              SENTINEL v2.0 · WeMakeDevs × FalkorDB · Track 1 · All sessions are monitored and logged
-            </p>
-          </>
-        )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
+
+      {/* Footer */}
+      <footer className="w-full max-w-lg mx-auto text-center text-[11px] text-[#7a6f63] font-mono mt-6">
+        SENTINEL &bull; Autonomous AI Cyber Defense System
+      </footer>
     </div>
   );
 }

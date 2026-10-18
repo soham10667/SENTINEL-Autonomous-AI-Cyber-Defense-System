@@ -9,6 +9,7 @@ from app.database.schema import init_schema
 from app.simulation.seed_data import seed_enterprise_graph
 from app.api.routes import router as api_router
 from app.api.websocket import ws_router
+from app.auth.router import router as auth_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -67,6 +68,7 @@ app.add_middleware(
 
 app.include_router(api_router)
 app.include_router(ws_router)
+app.include_router(auth_router, prefix="/api")
 
 @app.get("/")
 def root():

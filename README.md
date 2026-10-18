@@ -73,9 +73,26 @@ Access the application: **`http://localhost:3001`**
 
 ---
 
-## 6. Primary Hackathon Demonstration
+## 6. Website Experience & Authentication Flow
 
-1. Open `http://localhost:3001/simulation`.
+SENTINEL features two streamlined pathways for evaluation and operational use:
+
+1. **Standard Operator Pathway:**
+   - **Landing Page (`http://localhost:3001/`):** Modern white & soft-pink cybersecurity presentation, interactive FalkorDB topology visualizer, capability breakdown, and repository links.
+   - **Register (`/register`):** Full name, work email, password strength indicator, terms acceptance, and FalkorDB `OperatorAccount` persistence.
+   - **Login (`/login`):** PBKDF2 salted hash verification, HMAC-SHA256 JWT session generation, and redirect to the defense dashboard.
+   - **Operator Session Management:** Persistent sessions, clearance tracking, and secure logout.
+
+2. **Hackathon Judge Pathway (Instant Live Demo):**
+   - Click **"Try Live Demo"** from the landing page, login, or registration pages.
+   - Instantly issues a pre-signed read-only evaluator session (`role: JUDGE`) and opens the live defense console (`/dashboard?demo=true`).
+   - Judges can inspect live FalkorDB knowledge graph records, execute attack simulations, and audit agent counterfactual reasoning without creating an account or risking production mutations.
+
+---
+
+## 7. Primary Hackathon Demonstration
+
+1. Open `http://localhost:3001/simulation` (or enter via **Try Live Demo** on the Landing Page).
 2. Select **Scenario A: Compromised Employee Account** (Sarah Connor / Russian proxy).
 3. Click **"Launch Security Incident Simulation"**.
 4. Observe the live 9-stage autonomous pipeline:
@@ -89,7 +106,7 @@ Access the application: **`http://localhost:3001`**
 
 ---
 
-## 7. Running Backend Tests
+## 8. Running Backend Tests
 
 ```powershell
 cd "e:\falkor db hackathon\SENTINEL\backend"
@@ -98,7 +115,8 @@ pytest -v
 
 ---
 
-## 8. License
+## 9. License
 
 Developed for the WeMakeDevs &times; FalkorDB Graph Hacks Hackathon (Track 1).
+GitHub Repository: [https://github.com/soham10667/SENTINEL-Autonomous-AI-Cyber-Defense-System](https://github.com/soham10667/SENTINEL-Autonomous-AI-Cyber-Defense-System)
 

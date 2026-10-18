@@ -29,27 +29,28 @@ export function getSeverityBadgeClass(sev: string): string {
     case 'VERIFIED':
       return 'bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold';
     default:
-      return 'bg-[#FFF9FC] text-[#77717A] border border-[#F5E1E9] font-medium';
+      return 'bg-[#e8e2d6] text-[#7a6f63] border border-[#d9d0c0] font-medium';
   }
 }
 
 export function getNodeColor(label: string): string {
   switch (label) {
     case 'User':
-      return '#F4A7C1'; // Primary Soft Pink
+      return '#8b5cf6'; // Purple for user identities
     case 'Device':
-      return '#E88DAD'; // Button / Soft Rose Pink
+      return '#3b82f6'; // Blue for workstations & endpoints
     case 'Server':
-      return '#D9769B'; // Deeper Soft Pink
+      return '#10b981'; // Mint for internal servers
     case 'Database':
-      return '#f59e0b'; // Amber / Gold (Preserved warning/crown jewel target)
+      return '#f59e0b'; // Amber/Gold for crown jewel databases
     case 'IPAddress':
-      return '#FBCFE8'; // Pastel Pink
+      return '#ec4899'; // Rose for external IP nodes
     case 'SecurityEvent':
-      return '#ef4444'; // Red (Preserved for critical threats)
+      return '#ef4444'; // Red for threat events
     case 'Permission':
-      return '#10b981'; // Emerald (Preserved for verified-safe systems)
+      return '#10b981'; // Emerald for IAM permissions
     default:
-      return '#F4A7C1'; // Soft pink fallback
+      return '#10b981'; // Mint fallback
   }
 }
+

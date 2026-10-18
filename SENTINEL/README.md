@@ -88,7 +88,19 @@ Access the application: **`http://localhost:3001`**
 
 ---
 
-## 6. Primary Hackathon Demonstration
+## 6. Website Experience & Authentication Flow
+
+SENTINEL features two streamlined pathways for evaluation and operational use:
+
+1. **Operator Access & Authentication:**
+   - **Landing Page (`http://localhost:3001/`):** Professional warm cream & beige design matching the Security Knowledge Graph, interactive topology visualizer, capability breakdown, and direct access.
+   - **Register (`/register`):** Full name, work email, password strength indicator, terms acceptance, and FalkorDB `OperatorAccount` persistence.
+   - **Login (`/login`):** PBKDF2 salted hash verification, HMAC-SHA256 JWT session generation, and redirect to the defense dashboard.
+   - **Operator Session Management:** Persistent sessions, clearance tracking, and secure logout.
+
+---
+
+## 7. Autonomous Simulation & Knowledge Graph Demonstration
 
 1. Open `http://localhost:3001/simulation`.
 2. Select **Scenario A: Compromised Employee Account** (Sarah Connor / Russian proxy).
@@ -104,7 +116,7 @@ Access the application: **`http://localhost:3001`**
 
 ---
 
-## 7. Running Backend Tests
+## 8. Running Backend Tests
 
 ```powershell
 cd "e:\falkor db hackathon\SENTINEL\backend"
@@ -113,6 +125,7 @@ pytest -v
 
 ---
 
-## 8. License
+## 9. License
 
 Developed for the WeMakeDevs &times; FalkorDB Graph Hacks Hackathon (Track 1).
+GitHub Repository: [https://github.com/soham10667/SENTINEL-Autonomous-AI-Cyber-Defense-System](https://github.com/soham10667/SENTINEL-Autonomous-AI-Cyber-Defense-System)

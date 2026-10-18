@@ -83,9 +83,70 @@ class FalkorDBManager:
             logger.info("FalkorDB connection dropped. Attempting automatic reconnection...")
             return self.reconnect()
 
+    def select_graph(self, graph_name: str) -> bool:
+        """Select a graph by name dynamically."""
+        if not graph_name or not graph_name.strip():
+            raise ValueError("Graph name cannot be empty")
+        clean_name = graph_name.strip()
+        self.graph_name = clean_name
+        if self.client:
+            self.graph = self.client.select_graph(self.graph_name)
+            logger.info(f"Switched active FalkorDB graph to '{self.graph_name}'")
+            return True
+        return self.connect()
+
+    def list_graphs(self) -> List[Dict[str, Any]]:
+        """
+        List all graphs present in FalkorDB with their node and relationship counts.
+        """
+        if not self.is_connected():
+            return []
+        
+        graph_names = []
+        try:
+            if hasattr(self.client, "list_graphs") and callable(self.client.list_graphs):
+                raw_list = self.client.list_graphs()
+                graph_names = [g.decode("utf-8") if isinstance(g, bytes) else str(g) for g in raw_list]
+            elif hasattr(self.client, "connection"):
+                raw_list = self.client.connection.execute_command("GRAPH.LIST")
+                graph_names = [g.decode("utf-8") if isinstance(g, bytes) else str(g) for g in raw_list]
+        except Exception as e:
+            logger.warning(f"Could not retrieve graph list via client command: {e}")
+            graph_names = list(set([self.graph_name, "sentinel", "hackathon"]))
+
+        if not graph_names:
+            graph_names = [self.graph_name]
+
+        # Ensure active graph is included
+        if self.graph_name not in graph_names:
+            graph_names.append(self.graph_name)
+
+        results = []
+        for g_name in sorted(graph_names):
+            try:
+                g_instance = self.client.select_graph(g_name)
+                n_res = g_instance.query("MATCH (n) RETURN count(n) AS cnt")
+                r_res = g_instance.query("MATCH ()-[r]->() RETURN count(r) AS cnt")
+                n_count = n_res.result_set[0][0] if n_res and n_res.result_set else 0
+                r_count = r_res.result_set[0][0] if r_res and r_res.result_set else 0
+                results.append({
+                    "name": g_name,
+                    "node_count": n_count,
+                    "relationship_count": r_count,
+                    "is_active": (g_name == self.graph_name)
+                })
+            except Exception as ge:
+                logger.debug(f"Error checking counts for graph '{g_name}': {ge}")
+                results.append({
+                    "name": g_name,
+                    "node_count": 0,
+                    "relationship_count": 0,
+                    "is_active": (g_name == self.graph_name)
+                })
+        return results
+
     def check_health(self) -> Dict[str, Any]:
-        """Verify real connection status, graph statistics, and latency."""
-        self.reload_config()
+        """Verify real connection status, graph statistics, latency, and available graphs."""
         try:
             start = time.time()
             if not self.is_connected():
@@ -97,7 +158,8 @@ class FalkorDBManager:
                     "node_count": 0,
                     "relationship_count": 0,
                     "latency_ms": 0,
-                    "error": "Connection to FalkorDB server failed"
+                    "available_graphs": [],
+                    "error": f"Connection to FalkorDB failed at {self.host}:{self.port}. Ensure FalkorDB container is running."
                 }
             
             node_res = self.graph.query("MATCH (n) RETURN count(n) AS node_count")
@@ -106,6 +168,7 @@ class FalkorDBManager:
             
             node_count = node_res.result_set[0][0] if node_res and node_res.result_set else 0
             rel_count = rel_res.result_set[0][0] if rel_res and rel_res.result_set else 0
+            available_graphs = self.list_graphs()
 
             return {
                 "connected": True,
@@ -114,7 +177,8 @@ class FalkorDBManager:
                 "graph": self.graph_name,
                 "node_count": node_count,
                 "relationship_count": rel_count,
-                "latency_ms": latency_ms
+                "latency_ms": latency_ms,
+                "available_graphs": available_graphs
             }
         except Exception as e:
             logger.error(f"Error checking FalkorDB health: {e}")
@@ -126,7 +190,8 @@ class FalkorDBManager:
                 "node_count": 0,
                 "relationship_count": 0,
                 "latency_ms": 0,
-                "error": str(e)
+                "available_graphs": [],
+                "error": f"FalkorDB query error: {str(e)}"
             }
 
     def query(self, cypher: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:

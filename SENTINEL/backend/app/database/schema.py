@@ -38,8 +38,8 @@ def init_schema():
 def clear_sentinel_graph():
     """Safety-guaranteed clear method for sentinel graph only."""
     db = get_db_manager()
-    if db.graph_name == "hackathon":
-        logger.warning("SAFETY NOTICE: Preserving existing 'hackathon' graph. Skipping destructive clear.")
+    if db.graph_name != "sentinel":
+        logger.warning("SAFETY NOTICE: Refusing to clear non-sentinel graph '%s'. Preserving existing data.", db.graph_name)
         init_schema()
         return
     

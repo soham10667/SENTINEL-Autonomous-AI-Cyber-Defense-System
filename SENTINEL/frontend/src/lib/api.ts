@@ -11,23 +11,98 @@ import {
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('sentinel_token') : null;
+  const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
   const res = await fetch(`${API_BASE}${url}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...authHeaders,
       ...(options?.headers || {})
     }
   });
   if (!res.ok) {
     const errorText = await res.text();
-    throw new Error(`API Error [${res.status}]: ${errorText}`);
+    let parsedMessage = errorText;
+    try {
+      const errObj = JSON.parse(errorText);
+      parsedMessage = errObj.detail || errObj.message || errorText;
+    } catch {}
+    throw new Error(parsedMessage);
   }
   return res.json();
 }
 
+export function getStoredAuth(): { token: string | null; user: any | null } {
+  if (typeof window === 'undefined') return { token: null, user: null };
+  const token = localStorage.getItem('sentinel_token');
+  const userJson = localStorage.getItem('sentinel_user');
+  let user = null;
+  if (userJson) {
+    try { user = JSON.parse(userJson); } catch {}
+  }
+  return { token, user };
+}
+
+export function setStoredAuth(token: string, user: any) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('sentinel_token', token);
+  localStorage.setItem('sentinel_user', JSON.stringify(user));
+  localStorage.removeItem('sentinel_is_demo');
+}
+
+export function clearStoredAuth() {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('sentinel_token');
+  localStorage.removeItem('sentinel_user');
+  localStorage.removeItem('sentinel_is_demo');
+}
+
 export const api = {
+  login: (email: string, password: string, remember_me = false) =>
+    fetchJson<{ access_token: string; token_type: string; user: any }>('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, remember_me })
+    }),
+  register: (fullName: string, email: string, password: string, clearanceLevel = 'operator') =>
+    fetchJson<{ access_token: string; token_type: string; user: any }>('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ full_name: fullName, email, password, clearance_level: clearanceLevel })
+    }),
+  getMe: () => fetchJson<{ status: string; user: any }>('/api/auth/me'),
   getHealth: () => fetchJson<{ status: string; database: any }>('/api/health'),
-  getGraphHealth: () => fetchJson<{ connected: boolean; host: string; port: number; graph: string; node_count: number; relationship_count: number; latency_ms: number; error?: string }>('/api/graph/health'),
+  getGraphHealth: () => fetchJson<{
+    connected: boolean;
+    host: string;
+    port: number;
+    graph: string;
+    node_count: number;
+    relationship_count: number;
+    latency_ms: number;
+    available_graphs?: Array<{ name: string; node_count: number; relationship_count: number; is_active: boolean }>;
+    error?: string;
+  }>('/api/graph/health'),
+  getGraphList: () => fetchJson<{
+    active_graph: string;
+    graphs: Array<{ name: string; node_count: number; relationship_count: number; is_active: boolean }>;
+  }>('/api/graph/list'),
+  switchGraph: (graphName: string) => fetchJson<{
+    status: string;
+    active_graph: string;
+    database: any;
+  }>('/api/graph/switch', {
+    method: 'POST',
+    body: JSON.stringify({ graph_name: graphName })
+  }),
+  seedGraph: (options?: { force_reset?: boolean; target_graph?: string }) => fetchJson<{
+    status: string;
+    graph: string;
+    database: any;
+  }>('/api/graph/seed', {
+    method: 'POST',
+    body: JSON.stringify(options || {})
+  }),
   reconnectGraph: () => fetchJson<{ status: string; database: any }>('/api/graph/reconnect', { method: 'POST' }),
   getDashboardSummary: () => fetchJson<DashboardSummary>('/api/dashboard/summary'),
   getGraphOverview: () => fetchJson<GraphData>('/api/graph/overview'),
@@ -42,11 +117,22 @@ export const api = {
     return fetchJson<any[]>(`/api/graph/nodes${qs}`);
   },
   getGraphNode: (nodeId: string) => fetchJson<any>(`/api/graph/nodes/${nodeId}`),
-  createNode: (label: string, properties: Record<string, any>) =>
-    fetchJson<{ status: string; node: any }>('/api/graph/nodes', {
+  createNode: (param1: string | Record<string, any>, param2?: Record<string, any>) => {
+    let label = 'Entity';
+    let properties: Record<string, any> = {};
+    if (typeof param1 === 'string') {
+      label = param1;
+      properties = param2 || {};
+    } else if (param1 && typeof param1 === 'object') {
+      label = param1.label || 'Entity';
+      const { label: _l, ...rest } = param1;
+      properties = rest;
+    }
+    return fetchJson<{ status: string; node: any }>('/api/graph/nodes', {
       method: 'POST',
       body: JSON.stringify({ label, properties })
-    }),
+    });
+  },
   getGraphRelationships: (params?: { type?: string; source_id?: string; target_id?: string; limit?: number; skip?: number }) => {
     const q = new URLSearchParams();
     if (params?.type) q.set('type', params.type);

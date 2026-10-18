@@ -36,13 +36,12 @@ export default function GraphView({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<string>('ALL');
 
-  // Convert GraphData nodes into React Flow nodes with organic circular/grid positioning
+  // Convert GraphData nodes into React Flow nodes
   const initialNodes: Node[] = useMemo(() => {
     const total = data.nodes.length || 1;
-    const radius = Math.max(280, total * 22);
+    const radius = Math.max(260, total * 20);
 
     return data.nodes.map((n, idx) => {
-      // Angle-based layout for circular radial graph structure
       const angle = (idx / total) * 2 * Math.PI;
       const x = Math.round(450 + radius * Math.cos(angle));
       const y = Math.round(300 + radius * Math.sin(angle));
@@ -58,12 +57,12 @@ export default function GraphView({
         data: {
           label: (
             <div className="flex flex-col items-center">
-              <span className="text-[10px] font-mono tracking-wider text-[#77717A] uppercase">{n.label}</span>
-              <span className="font-bold text-xs text-[#29252A] truncate max-w-[130px]">
+              <span className="text-[9px] font-mono tracking-wider text-[#7a6f63] uppercase font-bold">{n.label}</span>
+              <span className="font-bold text-xs text-[#2c2825] truncate max-w-[130px]">
                 {n.properties?.name || n.properties?.username || n.properties?.hostname || n.properties?.ip || n.id}
               </span>
               {isCrownJewel && (
-                <span className="text-[9px] bg-amber-50 text-amber-800 px-1.5 py-0.5 rounded mt-0.5 border border-amber-300 font-bold">
+                <span className="text-[9px] bg-amber-100 text-amber-900 px-1.5 py-0.2 rounded mt-0.5 border border-amber-300 font-bold">
                   CROWN JEWEL
                 </span>
               )}
@@ -72,19 +71,19 @@ export default function GraphView({
           rawNode: n
         },
         style: {
-          background: isSevered ? '#F1F5F9' : isPath ? '#FEF2F2' : '#FFFFFF',
-          color: '#29252A',
+          background: isSevered ? '#e8e2d6' : isPath ? '#fef2f2' : '#ede8dc',
+          color: '#2c2825',
           border: isSevered
             ? '2px dashed #94a3b8'
             : isPath
             ? '2px solid #ef4444'
             : `1.5px solid ${nodeColor}`,
           boxShadow: isPath
-            ? '0 0 15px rgba(239, 68, 68, 0.3)'
-            : '0 2px 10px rgba(244, 167, 193, 0.2)',
+            ? '0 0 12px rgba(239, 68, 68, 0.35)'
+            : '0 2px 8px rgba(0, 0, 0, 0.05)',
           borderRadius: '10px',
-          padding: '8px 12px',
-          minWidth: '130px',
+          padding: '6px 10px',
+          minWidth: '120px',
           opacity: isSevered ? 0.45 : 1,
           cursor: 'pointer'
         }
@@ -107,24 +106,24 @@ export default function GraphView({
         label: e.type,
         animated: isPathEdge,
         style: {
-          stroke: isSeveredEdge ? '#CBD5E1' : isPathEdge ? '#ef4444' : '#F4A7C1',
+          stroke: isSeveredEdge ? '#cbd5e1' : isPathEdge ? '#ef4444' : '#b8ada0',
           strokeWidth: isPathEdge ? 2.5 : 1.5,
           strokeDasharray: isSeveredEdge ? '5 5' : undefined,
           opacity: isSeveredEdge ? 0.35 : 1
         },
         labelStyle: {
-          fill: isPathEdge ? '#dc2626' : '#77717A',
+          fill: isPathEdge ? '#dc2626' : '#7a6f63',
           fontSize: 9,
           fontFamily: 'monospace',
           fontWeight: 600
         },
         labelBgStyle: {
-          fill: '#FFFFFF',
+          fill: '#ede8dc',
           fillOpacity: 0.95
         },
         markerEnd: {
           type: MarkerType.ArrowClosed,
-          color: isPathEdge ? '#ef4444' : '#F4A7C1',
+          color: isPathEdge ? '#ef4444' : '#a89d8f',
           width: 14,
           height: 14
         }
@@ -135,13 +134,11 @@ export default function GraphView({
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  // Sync state when data props change
   React.useEffect(() => {
     setNodes(initialNodes);
     setEdges(initialEdges);
   }, [initialNodes, initialEdges, setNodes, setEdges]);
 
-  // Handle node selection
   const handleNodeClick = useCallback(
     (_: React.MouseEvent, node: Node) => {
       if (onSelectNode && node.data?.rawNode) {
@@ -151,7 +148,6 @@ export default function GraphView({
     [onSelectNode]
   );
 
-  // Filter nodes based on search & label filter
   const filteredNodes = useMemo(() => {
     return nodes.filter((n) => {
       const raw = n.data?.rawNode as GraphNodeData | undefined;
@@ -165,70 +161,90 @@ export default function GraphView({
     });
   }, [nodes, searchTerm, selectedFilter]);
 
+  // Synchronize edges so only edges with both endpoints present in filteredNodes are rendered
+  const filteredEdges = useMemo(() => {
+    const visibleNodeIds = new Set(filteredNodes.map((n) => n.id));
+    return edges.filter((e) => visibleNodeIds.has(e.source) && visibleNodeIds.has(e.target));
+  }, [edges, filteredNodes]);
+
   const nodeLabels = useMemo(() => {
     const dynamic = Array.from(new Set(data.nodes.map((n) => n.label).filter(Boolean)));
     return ['ALL', ...(dynamic.length > 0 ? dynamic : ['User', 'Device', 'Server', 'Database'])];
   }, [data.nodes]);
 
+  const hasActiveFilter = selectedFilter !== 'ALL' || searchTerm.trim() !== '';
+
   return (
-    <div className="relative w-full h-[620px] rounded-2xl border border-[#F5E1E9] bg-white overflow-hidden shadow-[0_4px_25px_rgba(244,167,193,0.15)] flex flex-col">
+    <div className="relative w-full h-[450px] sm:h-[500px] lg:h-[calc(100vh-270px)] min-h-[380px] max-h-[640px] rounded-xl border border-[#d9d0c0] bg-[#ede8dc] overflow-hidden shadow-sm flex flex-col">
       {/* Top HUD Controls bar */}
-      <div className="h-14 px-4 bg-[#FFF9FC] border-b border-[#F5E1E9] flex items-center justify-between z-10 gap-4">
+      <div className="h-12 px-3 bg-[#e8e2d6] border-b border-[#d9d0c0] flex items-center justify-between z-10 gap-2 sm:gap-4 overflow-x-auto shrink-0">
         {/* Search */}
-        <div className="relative flex-1 max-w-xs">
-          <Search className="w-3.5 h-3.5 text-[#77717A] absolute left-3 top-1/2 -translate-y-1/2" />
+        <div className="relative flex-1 max-w-xs shrink-0">
+          <Search className="w-3.5 h-3.5 text-[#7a6f63] absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search graph node or ID..."
+            placeholder="Search node or ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white border border-[#F5E1E9] rounded-xl pl-9 pr-3 py-1.5 text-xs text-[#29252A] placeholder-[#77717A] focus:outline-none focus:border-[#E88DAD] focus:ring-1 focus:ring-[#E88DAD]"
+            className="w-full bg-[#ede8dc] border border-[#d9d0c0] rounded-lg pl-8 pr-2.5 py-1 text-xs text-[#2c2825] placeholder-[#7a6f63] focus:outline-none focus:border-[#10b981]"
           />
         </div>
 
         {/* Node Label Filters */}
-        <div className="flex items-center gap-1.5 overflow-x-auto py-1">
-          <Filter className="w-3.5 h-3.5 text-[#77717A] mr-1 shrink-0" />
+        <div className="flex items-center gap-1 overflow-x-auto py-1">
+          <Filter className="w-3.5 h-3.5 text-[#7a6f63] mr-0.5 shrink-0" />
           {nodeLabels.map((lbl) => (
             <button
               key={lbl}
               onClick={() => setSelectedFilter(lbl)}
-              className={`text-[11px] font-mono px-2.5 py-1 rounded-lg transition-all shrink-0 ${
+              className={`text-[10px] font-mono px-2 py-0.5 rounded-md transition-all shrink-0 ${
                 selectedFilter === lbl
-                  ? 'bg-[#FCE7F3] text-[#D9769B] border border-[#F4A7C1] font-bold shadow-sm'
-                  : 'bg-white text-[#77717A] hover:text-[#29252A] hover:bg-[#FFF7FA] border border-[#F5E1E9]'
+                  ? 'bg-[#d4ede3] text-[#1a2e22] border border-[#10b981]/60 font-bold shadow-sm'
+                  : 'bg-[#ede8dc] text-[#7a6f63] hover:text-[#2c2825] border border-[#d9d0c0]'
               }`}
             >
               {lbl}
             </button>
           ))}
+          {hasActiveFilter && (
+            <button
+              onClick={() => {
+                setSelectedFilter('ALL');
+                setSearchTerm('');
+              }}
+              className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-red-100 text-red-700 hover:bg-red-200 border border-red-300 ml-1 shrink-0 font-bold"
+              title="Reset Search and Filter"
+            >
+              CLEAR
+            </button>
+          )}
         </div>
 
         {/* Legend & Refresh */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 shrink-0">
           {highlightPathNodeIds.length > 0 && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-50 border border-red-200 text-red-600 text-xs font-mono font-bold animate-pulse">
-              <ShieldAlert className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-red-100 border border-red-300 text-red-700 text-[10px] font-mono font-bold animate-pulse">
+              <ShieldAlert className="w-3 h-3" />
               <span>Attack Chain ({highlightPathNodeIds.length} nodes)</span>
             </div>
           )}
           {onRefresh && (
             <button
               onClick={onRefresh}
-              className="p-1.5 rounded-xl bg-white border border-[#F5E1E9] text-[#77717A] hover:text-[#E88DAD] hover:border-[#F4A7C1] transition-colors shadow-sm"
+              className="p-1 rounded-lg bg-[#ede8dc] border border-[#d9d0c0] text-[#7a6f63] hover:text-[#10b981] hover:border-[#10b981] transition-colors"
               title="Refresh Graph"
             >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-[#E88DAD]' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-[#10b981]' : ''}`} />
             </button>
           )}
         </div>
       </div>
 
-      {/* Main Flow Canvas - White Background with Soft Pink Grid Dots */}
-      <div className="flex-1 w-full h-full relative bg-white">
+      {/* Main Flow Canvas */}
+      <div className="flex-1 w-full h-full relative bg-[#f5f0e8]">
         <ReactFlow
           nodes={filteredNodes}
-          edges={edges}
+          edges={filteredEdges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onNodeClick={handleNodeClick}
@@ -236,47 +252,61 @@ export default function GraphView({
           minZoom={0.2}
           maxZoom={2.5}
         >
-          <Background color="#F5E1E9" gap={24} size={1.5} />
+          <Background color="#d9d0c0" gap={22} size={1} />
           <Controls />
           <MiniMap
             nodeColor={(n) => {
               const raw = n.data?.rawNode as GraphNodeData | undefined;
-              return raw ? getNodeColor(raw.label) : '#F4A7C1';
+              return raw ? getNodeColor(raw.label) : '#10b981';
             }}
-            maskColor="rgba(252, 231, 243, 0.4)"
+            maskColor="rgba(237, 232, 220, 0.4)"
             style={{
-              backgroundColor: '#FFFFFF',
-              border: '1px solid #F5E1E9',
-              borderRadius: '10px'
+              backgroundColor: '#ede8dc',
+              border: '1px solid #d9d0c0',
+              borderRadius: '8px'
             }}
           />
         </ReactFlow>
 
         {/* Loading Overlay */}
         {isLoading && (
-          <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] flex flex-col items-center justify-center z-20 pointer-events-none">
-            <RefreshCw className="w-8 h-8 text-[#E88DAD] animate-spin mb-2" />
-            <span className="text-xs font-mono font-bold text-[#D9769B]">Querying FalkorDB Graph...</span>
+          <div className="absolute inset-0 bg-[#f5f0e8]/80 backdrop-blur-[2px] flex flex-col items-center justify-center z-20 pointer-events-none">
+            <RefreshCw className="w-7 h-7 text-[#10b981] animate-spin mb-2" />
+            <span className="text-xs font-mono font-bold text-[#2c2825]">Querying FalkorDB Graph...</span>
           </div>
         )}
 
         {/* Empty State */}
         {!isLoading && data.nodes.length === 0 && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none p-6 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-[#FFF7FA] border border-[#F5E1E9] flex items-center justify-center mb-3">
-              <ShieldAlert className="w-6 h-6 text-[#E88DAD]" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none p-4 text-center">
+            <div className="w-10 h-10 rounded-xl bg-[#ede8dc] border border-[#d9d0c0] flex items-center justify-center mb-2">
+              <ShieldAlert className="w-5 h-5 text-red-500" />
             </div>
-            <p className="text-sm font-bold text-[#29252A]">No Graph Nodes Found</p>
-            <p className="text-xs text-[#77717A] max-w-sm mt-1">
+            <p className="text-sm font-bold text-[#2c2825]">No Graph Nodes Found</p>
+            <p className="text-xs text-[#7a6f63] max-w-sm mt-0.5">
               Verify your FalkorDB container is running and the graph contains nodes.
             </p>
           </div>
         )}
 
         {/* Node stats watermark */}
-        <div className="absolute bottom-4 left-4 bg-white/95 border border-[#F5E1E9] px-3.5 py-1.5 rounded-xl text-[11px] font-mono text-[#77717A] pointer-events-none z-10 flex gap-4 shadow-sm">
-          <span>NODES: <strong className="text-[#29252A]">{data.nodes.length}</strong></span>
-          <span>RELATIONSHIPS: <strong className="text-[#29252A]">{data.edges.length}</strong></span>
+        <div className="absolute bottom-3 left-3 bg-[#ede8dc]/95 border border-[#d9d0c0] px-2.5 py-1 rounded-lg text-[10px] font-mono text-[#7a6f63] pointer-events-none z-10 flex gap-3 shadow-sm">
+          <span>
+            NODES:{' '}
+            <strong className="text-[#2c2825]">
+              {filteredNodes.length !== data.nodes.length
+                ? `${filteredNodes.length} / ${data.nodes.length}`
+                : data.nodes.length}
+            </strong>
+          </span>
+          <span>
+            RELATIONSHIPS:{' '}
+            <strong className="text-[#2c2825]">
+              {filteredEdges.length !== data.edges.length
+                ? `${filteredEdges.length} / ${data.edges.length}`
+                : data.edges.length}
+            </strong>
+          </span>
         </div>
       </div>
     </div>

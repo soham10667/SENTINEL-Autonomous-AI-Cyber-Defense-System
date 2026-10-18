@@ -15,10 +15,10 @@ const scenarios = [
   {
     id: 'A',
     title: 'Scenario A: Compromised Employee Account',
-    badge: 'PRIMARY HACKATHON DEMO',
-    badgeColor: 'bg-[#FCE7F3] text-[#D9769B] border-[#FBCFE8]',
+    badge: 'FLAGSHIP SCENARIO',
+    badgeColor: 'bg-[#d4ede3] text-emerald-800 border-[#10b981]/50',
     description:
-      'Attacker uses stolen credentials via Russian proxy IP 194.26.29.112 to hijack Sarah Connor (USR-002), traversing from her laptop DEV-WKS-02 through CI runner SRV-CI-02 towards Customer PII Database (DB-PROD-CUST-01).',
+      'Attacker uses stolen credentials via Russian proxy IP 194.26.29.112 to hijack Sarah Connor (USR-002), traversing from laptop DEV-WKS-02 through CI runner SRV-CI-02 towards Customer PII Database (DB-PROD-CUST-01).',
     entryEntity: '194.26.29.112',
     targetThreat: 'DB-PROD-CUST-01 (PII Crown Jewel)',
     expectedContainment: 'SIMULATE_BLOCK_IP & SIMULATE_DISABLE_ACCOUNT'
@@ -27,7 +27,7 @@ const scenarios = [
     id: 'B',
     title: 'Scenario B: Suspicious Lateral Access',
     badge: 'INFRASTRUCTURE ATTACK',
-    badgeColor: 'bg-purple-50 text-purple-700 border-purple-200',
+    badgeColor: 'bg-purple-100/70 text-purple-800 border-purple-300',
     description:
       'Compromised staging CI/CD runner SRV-CI-02 pivots into internal PCI-DSS payment enclave SRV-PAY-API via unauthorized SSH tunneling, attempting to dump cardholder data from DB-PAYMENTS-01.',
     entryEntity: 'SRV-CI-02',
@@ -38,7 +38,7 @@ const scenarios = [
     id: 'C',
     title: 'Scenario C: Privilege Misuse & IAM Escalation',
     badge: 'INSIDER PRIVILEGE ESCALATION',
-    badgeColor: 'bg-amber-50 text-amber-700 border-amber-200',
+    badgeColor: 'bg-amber-100/70 text-amber-800 border-amber-300',
     description:
       'Contractor USR-004 (Alex Rivera) suddenly acquires unauthorized AWS AdministratorAccess permissions, accessing HashiCorp Vault / Cloud KMS server SRV-KMS-01.',
     entryEntity: 'USR-004',
@@ -72,25 +72,21 @@ export default function SimulationLabPage() {
     setCurrentStepIndex(0);
 
     try {
-      // Step 1: Start scenario in backend
       setCurrentStepIndex(1);
       const scenarioRes = await api.startSimulation(selectedScenario);
 
-      // Step 2-4: Visual step animation
       for (let i = 2; i <= 5; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 600));
+        await new Promise((resolve) => setTimeout(resolve, 500));
         setCurrentStepIndex(i);
       }
 
-      // Step 5: Start autonomous agent workflow
       setCurrentStepIndex(6);
       const invRes = await api.startInvestigation(
         scenarioRes.incident_id,
         scenarioRes.event_id
       );
 
-      // Final step
-      await new Promise((resolve) => setTimeout(resolve, 600));
+      await new Promise((resolve) => setTimeout(resolve, 500));
       setCurrentStepIndex(8);
 
       setSimulationResult({
@@ -98,38 +94,37 @@ export default function SimulationLabPage() {
         investigation: invRes
       });
     } catch (err: any) {
-      console.error('Simulation execution failed:', err);
+      console.error('Simulation error:', err);
     } finally {
       setIsRunning(false);
     }
   };
 
   const handleReset = async () => {
-    setResetMessage('Resetting sentinel graph to clean baseline...');
     try {
-      await api.resetSimulation();
+      await api.reconnectGraph();
+      setResetMessage('Simulation state and baseline enterprise graph reset in FalkorDB.');
       setSimulationResult(null);
       setCurrentStepIndex(-1);
-      setResetMessage('FalkorDB sentinel graph successfully restored to clean baseline state.');
       setTimeout(() => setResetMessage(null), 4000);
     } catch (err: any) {
-      setResetMessage('Reset error: ' + (err.message || 'Failed'));
+      setResetMessage('Reset failed: ' + err.message);
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-3.5 max-w-7xl mx-auto">
       {/* Top Banner */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-[#D9769B] font-mono text-xs uppercase tracking-wider font-bold mb-1">
-            <FlaskConical className="w-4 h-4 text-[#E88DAD]" />
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-0.5">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5 text-[#10b981] font-mono text-[11px] uppercase tracking-wider font-bold mb-0.5">
+            <FlaskConical className="w-3.5 h-3.5 text-[#10b981] shrink-0" />
             <span>Interactive Cyber Simulation Environment</span>
           </div>
-          <h1 className="text-2xl font-bold text-[#29252A] tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-bold text-[#2c2825] tracking-tight leading-tight">
             Live Attack Simulation Lab
           </h1>
-          <p className="text-[#77717A] text-xs mt-0.5">
+          <p className="text-[#7a6f63] text-xs mt-0.5 truncate">
             Test autonomous graph-grounded attack investigation, multi-hop discovery, counterfactual containment, and automated response.
           </p>
         </div>
@@ -138,7 +133,7 @@ export default function SimulationLabPage() {
         <button
           onClick={handleReset}
           disabled={isRunning}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-[#F5E1E9] text-[#77717A] hover:text-amber-700 hover:border-amber-300 text-xs font-mono transition-all disabled:opacity-50 shadow-sm"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#ede8dc] border border-[#d9d0c0] text-[#7a6f63] hover:text-amber-700 hover:border-amber-300 text-xs font-mono transition-all disabled:opacity-50 shadow-sm shrink-0"
         >
           <RotateCcw className="w-3.5 h-3.5" />
           <span>Reset Simulation State</span>
@@ -146,39 +141,39 @@ export default function SimulationLabPage() {
       </div>
 
       {resetMessage && (
-        <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-mono shadow-sm">
+        <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-mono shadow-sm">
           {resetMessage}
         </div>
       )}
 
-      {/* Scenario Selection Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Scenario Selection Grid: 3 equal-height cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {scenarios.map((sc) => {
           const isSelected = selectedScenario === sc.id;
           return (
             <div
               key={sc.id}
               onClick={() => !isRunning && setSelectedScenario(sc.id)}
-              className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
+              className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between h-full min-w-0 ${
                 isSelected
-                  ? 'bg-[#FFF7FA] border-2 border-[#F4A7C1] shadow-[0_4px_20px_rgba(244,167,193,0.22)]'
-                  : 'bg-white border border-[#F5E1E9] hover:border-[#FBCFE8] hover:bg-[#FFF9FC] shadow-sm'
+                  ? 'bg-[#d4ede3]/30 border-2 border-[#10b981] shadow-sm'
+                  : 'bg-[#ede8dc] border-[#d9d0c0] hover:border-[#b8ada0] hover:bg-[#e8e2d6] shadow-sm'
               }`}
             >
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${sc.badgeColor}`}>
+                  <span className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold border ${sc.badgeColor}`}>
                     {sc.badge}
                   </span>
-                  <span className="text-xs font-mono text-[#77717A]">#{sc.id}</span>
+                  <span className="text-xs font-mono text-[#7a6f63]">#{sc.id}</span>
                 </div>
-                <h3 className="font-bold text-sm text-[#29252A]">{sc.title}</h3>
-                <p className="text-xs text-[#77717A] font-sans leading-relaxed">{sc.description}</p>
+                <h3 className="font-bold text-xs sm:text-sm text-[#2c2825]">{sc.title}</h3>
+                <p className="text-xs text-[#7a6f63] font-sans leading-relaxed line-clamp-3">{sc.description}</p>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-[#F5E1E9] text-[11px] font-mono space-y-1 text-[#77717A]">
-                <div>Origin: <strong className="text-[#D9769B]">{sc.entryEntity}</strong></div>
-                <div>Crown Jewel: <strong className="text-amber-800">{sc.targetThreat}</strong></div>
+              <div className="mt-3 pt-2.5 border-t border-[#d9d0c0] text-[10px] font-mono space-y-0.5 text-[#7a6f63]">
+                <div className="truncate">Origin: <strong className="text-[#10b981]">{sc.entryEntity}</strong></div>
+                <div className="truncate">Crown Jewel: <strong className="text-amber-800">{sc.targetThreat}</strong></div>
               </div>
             </div>
           );
@@ -186,14 +181,14 @@ export default function SimulationLabPage() {
       </div>
 
       {/* Execution Launch Area */}
-      <div className="p-6 rounded-2xl bg-white border border-[#F5E1E9] shadow-[0_4px_25px_rgba(244,167,193,0.15)] space-y-5">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div>
-            <h3 className="text-base font-bold text-[#29252A] flex items-center gap-2">
-              <Bot className="w-5 h-5 text-[#E88DAD]" />
-              Primary Hackathon Demonstration Trigger
+      <div className="p-4 sm:p-5 rounded-xl bg-[#ede8dc] border border-[#d9d0c0] shadow-sm space-y-3.5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-sm sm:text-base font-bold text-[#2c2825] flex items-center gap-2">
+              <Bot className="w-4 h-4 text-[#10b981]" />
+              Autonomous Simulation Engine Trigger
             </h3>
-            <p className="text-xs text-[#77717A] mt-1">
+            <p className="text-xs text-[#7a6f63] mt-0.5 max-w-2xl">
               Launches Scenario {selectedScenario}: Injects synthetic telemetry into FalkorDB, dispatches the agent, performs multi-hop investigation, and executes simulated containment.
             </p>
           </div>
@@ -201,40 +196,40 @@ export default function SimulationLabPage() {
           <button
             onClick={handleLaunchSimulation}
             disabled={isRunning}
-            className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#E88DAD] text-white font-bold text-xs uppercase tracking-wider hover:bg-[#D9769B] transition-all flex items-center justify-center gap-2.5 shadow-[0_4px_16px_rgba(232,141,173,0.35)] disabled:opacity-50 hover:scale-[1.02]"
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#10b981] text-white font-bold text-xs uppercase tracking-wider hover:bg-[#059669] transition-all flex items-center justify-center gap-2 shadow-[0_2px_12px_rgba(16,185,129,0.35)] disabled:opacity-50 shrink-0"
           >
-            <Play className={`w-4 h-4 fill-current ${isRunning ? 'animate-spin' : ''}`} />
+            <Play className={`w-3.5 h-3.5 fill-current ${isRunning ? 'animate-spin' : ''}`} />
             <span>{isRunning ? 'Investigation in Progress...' : 'Launch Security Incident Simulation'}</span>
           </button>
         </div>
 
         {/* Live Step Progress Checklist */}
         {currentStepIndex >= 0 && (
-          <div className="p-4 rounded-xl bg-[#FFF9FC] border border-[#F5E1E9] space-y-2.5 animate-in fade-in">
-            <div className="text-xs font-mono uppercase tracking-wider text-[#77717A] font-bold mb-1">
+          <div className="p-3.5 rounded-xl bg-[#e8e2d6] border border-[#d9d0c0] space-y-2 animate-in fade-in">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-[#7a6f63] font-bold">
               Autonomous Pipeline Execution Stages:
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5 text-xs font-mono">
               {simulationSteps.map((step, idx) => {
                 const isComplete = currentStepIndex > idx;
                 const isCurrent = currentStepIndex === idx;
                 return (
                   <div
                     key={idx}
-                    className={`flex items-center gap-2.5 p-2 rounded-lg border transition-all ${
+                    className={`flex items-center gap-2 p-1.5 rounded-lg border transition-all text-[11px] ${
                       isComplete
-                        ? 'text-emerald-700 bg-emerald-50 border-emerald-100 font-semibold'
+                        ? 'text-emerald-800 bg-[#d4ede3] border-[#10b981]/50 font-semibold'
                         : isCurrent
-                        ? 'text-[#D9769B] bg-[#FCE7F3] border-[#FBCFE8] font-bold animate-pulse'
-                        : 'text-[#77717A] border-transparent'
+                        ? 'text-[#10b981] bg-[#e4ddd0] border-[#10b981] font-bold animate-pulse'
+                        : 'text-[#7a6f63] border-transparent'
                     }`}
                   >
                     <CheckCircle2
                       className={`w-3.5 h-3.5 shrink-0 ${
-                        isComplete ? 'text-emerald-600' : isCurrent ? 'text-[#E88DAD]' : 'text-slate-300'
+                        isComplete ? 'text-emerald-600' : isCurrent ? 'text-[#10b981]' : 'text-stone-300'
                       }`}
                     />
-                    <span>
+                    <span className="truncate">
                       {idx + 1}. {step}
                     </span>
                   </div>
@@ -246,59 +241,59 @@ export default function SimulationLabPage() {
 
         {/* Completed Simulation Result Summary */}
         {simulationResult && (
-          <div className="p-5 rounded-2xl bg-[#FFF9FC] border border-emerald-300 space-y-4 shadow-sm animate-in fade-in">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-mono text-emerald-700 font-bold flex items-center gap-1.5">
+          <div className="p-4 rounded-xl bg-[#e8e2d6] border border-[#10b981]/60 space-y-3 shadow-sm animate-in fade-in">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-mono text-emerald-800 font-bold flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" /> INVESTIGATION & SIMULATED CONTAINMENT COMPLETED
               </span>
-              <span className="text-xs font-mono text-[#77717A]">
-                Incident: <strong className="text-[#29252A]">{simulationResult.incident_id}</strong>
+              <span className="text-xs font-mono text-[#7a6f63]">
+                Incident: <strong className="text-[#2c2825]">{simulationResult.incident_id}</strong>
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono">
-              <div className="p-3 rounded-xl bg-white border border-[#F5E1E9] shadow-sm">
-                <span className="text-[#77717A]">GRAPH RISK SCORE</span>
-                <div className="text-lg font-bold text-red-700 mt-0.5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs font-mono">
+              <div className="p-2.5 rounded-xl bg-[#ede8dc] border border-[#d9d0c0] shadow-sm">
+                <span className="text-[#7a6f63] text-[10px]">GRAPH RISK SCORE</span>
+                <div className="text-base sm:text-lg font-bold text-red-700 mt-0.5">
                   {simulationResult.investigation?.risk_score ?? 87.5}/100
                 </div>
               </div>
-              <div className="p-3 rounded-xl bg-white border border-[#F5E1E9] shadow-sm">
-                <span className="text-[#77717A]">DEFENSIVE ACTION</span>
-                <div className="text-lg font-bold text-[#D9769B] mt-0.5">
+              <div className="p-2.5 rounded-xl bg-[#ede8dc] border border-[#d9d0c0] shadow-sm">
+                <span className="text-[#7a6f63] text-[10px]">DEFENSIVE ACTION</span>
+                <div className="text-base sm:text-lg font-bold text-[#10b981] mt-0.5">
                   {simulationResult.investigation?.action_taken ?? 'BLOCK_IP'}
                 </div>
               </div>
-              <div className="p-3 rounded-xl bg-white border border-[#F5E1E9] shadow-sm">
-                <span className="text-[#77717A]">FALKORDB VERIFICATION</span>
-                <div className="text-lg font-bold text-emerald-700 mt-0.5">
+              <div className="p-2.5 rounded-xl bg-[#ede8dc] border border-[#d9d0c0] shadow-sm">
+                <span className="text-[#7a6f63] text-[10px]">FALKORDB VERIFICATION</span>
+                <div className="text-base sm:text-lg font-bold text-emerald-700 mt-0.5">
                   ENFORCED & VERIFIED
                 </div>
               </div>
             </div>
 
-            <p className="text-xs text-[#29252A] font-sans leading-relaxed">
+            <p className="text-xs text-[#2c2825] font-sans leading-relaxed">
               {simulationResult.investigation?.summary}
             </p>
 
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex flex-wrap items-center gap-2 pt-1">
               <Link
                 href="/graph"
-                className="px-4 py-2 rounded-xl bg-[#E88DAD] hover:bg-[#D9769B] text-white text-xs font-mono font-bold transition-all shadow-sm"
+                className="px-3 py-1.5 rounded-xl bg-[#10b981] hover:bg-[#059669] text-white text-xs font-mono font-bold transition-all shadow-sm"
               >
                 Inspect Updated Graph &rarr;
               </Link>
               <Link
                 href="/agent"
-                className="px-4 py-2 rounded-xl bg-white border border-[#F5E1E9] text-[#29252A] hover:bg-[#FFF7FA] text-xs font-mono font-semibold transition-all shadow-sm"
+                className="px-3 py-1.5 rounded-xl bg-[#ede8dc] border border-[#d9d0c0] text-[#2c2825] hover:bg-[#e4ddd0] text-xs font-mono font-semibold transition-all shadow-sm"
               >
                 View Agent Decision Trace &rarr;
               </Link>
               <Link
                 href="/reports"
-                className="px-4 py-2 rounded-xl bg-white border border-[#F5E1E9] text-[#29252A] hover:bg-[#FFF7FA] text-xs font-mono font-semibold transition-all shadow-sm"
+                className="px-3 py-1.5 rounded-xl bg-[#ede8dc] border border-[#d9d0c0] text-[#2c2825] hover:bg-[#e4ddd0] text-xs font-mono font-semibold transition-all shadow-sm"
               >
-                View Final Incident Report &rarr;
+                View Incident Report &rarr;
               </Link>
             </div>
           </div>

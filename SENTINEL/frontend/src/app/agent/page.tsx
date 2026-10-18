@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import {
   Bot,
   Cpu,
@@ -8,7 +9,8 @@ import {
   Terminal,
   Activity,
   ShieldCheck,
-  RefreshCw
+  RefreshCw,
+  Sparkles
 } from 'lucide-react';
 import AgentTraceTimeline from '../../components/AgentTraceTimeline';
 import { api } from '../../lib/api';
@@ -19,18 +21,21 @@ export default function AgentOperationsPage() {
   const [investigationId, setInvestigationId] = useState<string>('INV-2026-01');
   const [isRuleBased, setIsRuleBased] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSimulatedTrace, setIsSimulatedTrace] = useState<boolean>(false);
 
-  // Poll or load trace
   const loadTrace = async () => {
     setIsLoading(true);
     try {
       const res = await api.getInvestigationTrace('INV-2026-01');
-      if (res && res.steps) {
+      if (res && res.steps && res.steps.length > 0) {
         setTraceSteps(res.steps);
         setInvestigationId(res.investigation_id);
+        setIsSimulatedTrace(false);
+        return;
       }
+      throw new Error('No active trace found');
     } catch {
-      // If none active, provide realistic synthetic trace from baseline
+      setIsSimulatedTrace(true);
       setTraceSteps([
         {
           step_num: 1,
@@ -100,23 +105,23 @@ export default function AgentOperationsPage() {
             risk_before: 87.5,
             risk_after: 12.0,
             risk_reduction: 75.5,
-            paths_severed: 2
+            severed_paths: 2
           },
-          rationale: 'Simulated counterfactual impact: Blocking IP 194.26.29.112 severs all 2 active paths, reducing risk by 75.5 pts.',
+          rationale: 'Pre-flight counterfactual simulation: Severing 194.26.29.112 cuts exposure by 75.5 pts with zero business disruption.',
           timestamp: new Date().toISOString(),
           evidence_node_ids: ['194.26.29.112']
         },
         {
           step_num: 6,
-          phase: 'DEFENSIVE_CONTAINMENT',
+          phase: 'CONTAINMENT_EXECUTION',
           tool_name: 'simulate_block_ip',
-          tool_input: { ip: '194.26.29.112', reason: 'High-risk lateral attack path' },
+          tool_input: { ip_address: '194.26.29.112', rationale: 'Sever confirmed breach entry' },
           tool_output: {
             action_id: 'ACT-BLK-99A1',
             status: 'EXECUTED',
-            verified: true
+            firewall_rule: 'DROP src=194.26.29.112/32'
           },
-          rationale: 'Executed simulated perimeter firewall block on proxy IP 194.26.29.112.',
+          rationale: 'Enforced simulated perimeter firewall block on threat actor proxy node.',
           timestamp: new Date().toISOString(),
           evidence_node_ids: ['194.26.29.112']
         },
@@ -144,18 +149,18 @@ export default function AgentOperationsPage() {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-3.5 max-w-7xl mx-auto">
       {/* Top Banner */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-[#D9769B] font-mono text-xs uppercase tracking-wider font-bold mb-1">
-            <Bot className="w-4 h-4 text-[#E88DAD]" />
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-0.5">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5 text-[#10b981] font-mono text-[11px] uppercase tracking-wider font-bold mb-0.5">
+            <Bot className="w-3.5 h-3.5 text-[#10b981] shrink-0" />
             <span>Autonomous Agent Cognitive Trace</span>
           </div>
-          <h1 className="text-2xl font-bold text-[#29252A] tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-bold text-[#2c2825] tracking-tight leading-tight">
             Agent Operations & Decision Timeline
           </h1>
-          <p className="text-[#77717A] text-xs mt-0.5">
+          <p className="text-[#7a6f63] text-xs mt-0.5 truncate">
             Real-time step-by-step execution stream: tool calls, query summaries, evidence grounding, and verified defensive actions.
           </p>
         </div>
@@ -163,60 +168,82 @@ export default function AgentOperationsPage() {
         {/* Reload button */}
         <button
           onClick={loadTrace}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-[#F5E1E9] text-[#29252A] hover:text-[#D9769B] hover:border-[#FBCFE8] hover:bg-[#FFF9FC] text-xs font-mono font-semibold transition-all shadow-sm"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#ede8dc] border border-[#d9d0c0] text-[#2c2825] hover:text-[#10b981] hover:border-[#10b981] text-xs font-mono font-semibold transition-all shadow-sm shrink-0"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-[#E88DAD]' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-[#10b981]' : ''}`} />
           <span>Refresh Trace</span>
         </button>
       </div>
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-2xl bg-white border border-[#F5E1E9] flex items-center justify-between shadow-sm">
-          <div>
-            <span className="text-[10px] font-mono text-[#77717A] uppercase font-bold">Agent Brain</span>
-            <div className="text-sm font-bold font-mono text-[#D9769B] mt-0.5">
+      {/* Explicit Simulation Data Status Banner */}
+      {isSimulatedTrace && (
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs text-amber-900 shadow-sm animate-in fade-in duration-300">
+          <div className="flex items-center gap-2">
+            <Bot className="w-4 h-4 text-amber-600 shrink-0" />
+            <div>
+              <p className="font-bold">Simulated Reference Demonstration (Scenario A)</p>
+              <p className="text-[11px] text-amber-800 mt-0.5">
+                Displaying the baseline agent cognition model. To observe real-time agent execution persisted directly into your FalkorDB knowledge graph, launch an incident in the Simulation Lab.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/simulation"
+            className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg transition-colors shrink-0 shadow-sm self-end sm:self-auto"
+          >
+            Launch Incident &rarr;
+          </Link>
+        </div>
+      )}
+
+      {/* Metrics Row: 4 equal cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <div className="p-3 rounded-xl bg-[#ede8dc] border border-[#d9d0c0] flex items-center justify-between shadow-sm min-w-0">
+          <div className="min-w-0">
+            <span className="text-[10px] font-mono text-[#7a6f63] uppercase font-bold truncate block">Agent Brain</span>
+            <div className="text-xs sm:text-sm font-bold font-mono text-[#10b981] mt-0.5 truncate">
               LangGraph / FalkorDB
             </div>
           </div>
-          <Cpu className="w-5 h-5 text-[#E88DAD]" />
+          <Cpu className="w-4 h-4 text-[#10b981] shrink-0 ml-1.5" />
         </div>
 
-        <div className="p-4 rounded-2xl bg-white border border-[#F5E1E9] flex items-center justify-between shadow-sm">
-          <div>
-            <span className="text-[10px] font-mono text-[#77717A] uppercase font-bold">Tools Invoked</span>
-            <div className="text-sm font-bold font-mono text-[#29252A] mt-0.5">
+        <div className="p-3 rounded-xl bg-[#ede8dc] border border-[#d9d0c0] flex items-center justify-between shadow-sm min-w-0">
+          <div className="min-w-0">
+            <span className="text-[10px] font-mono text-[#7a6f63] uppercase font-bold truncate block">Tools Invoked</span>
+            <div className="text-xs sm:text-sm font-bold font-mono text-[#2c2825] mt-0.5 truncate">
               {traceSteps.length} MCP Tools
             </div>
           </div>
-          <Terminal className="w-5 h-5 text-[#E88DAD]" />
+          <Terminal className="w-4 h-4 text-[#10b981] shrink-0 ml-1.5" />
         </div>
 
-        <div className="p-4 rounded-2xl bg-white border border-[#F5E1E9] flex items-center justify-between shadow-sm">
-          <div>
-            <span className="text-[10px] font-mono text-[#77717A] uppercase font-bold">Autonomy Mode</span>
-            <div className="text-sm font-bold font-mono text-emerald-700 mt-0.5">
-              {isRuleBased ? 'Deterministic Rule-Based' : 'LLM-Grounded'}
+        <div className="p-3 rounded-xl bg-[#ede8dc] border border-[#d9d0c0] flex items-center justify-between shadow-sm min-w-0">
+          <div className="min-w-0">
+            <span className="text-[10px] font-mono text-[#7a6f63] uppercase font-bold truncate block">Autonomy Mode</span>
+            <div className="text-xs sm:text-sm font-bold font-mono text-emerald-800 mt-0.5 truncate">
+              {isRuleBased ? 'Deterministic Rules' : 'LLM-Grounded'}
             </div>
           </div>
-          <Activity className="w-5 h-5 text-emerald-600" />
+          <Activity className="w-4 h-4 text-emerald-600 shrink-0 ml-1.5" />
         </div>
 
-        <div className="p-4 rounded-2xl bg-white border border-[#F5E1E9] flex items-center justify-between shadow-sm">
-          <div>
-            <span className="text-[10px] font-mono text-[#77717A] uppercase font-bold">Containment Status</span>
-            <div className="text-sm font-bold font-mono text-emerald-700 mt-0.5 flex items-center gap-1">
-              <CheckCircle className="w-4 h-4 text-emerald-600" /> Enforced & Verified
+        <div className="p-3 rounded-xl bg-[#ede8dc] border border-[#d9d0c0] flex items-center justify-between shadow-sm min-w-0">
+          <div className="min-w-0">
+            <span className="text-[10px] font-mono text-[#7a6f63] uppercase font-bold truncate block">Containment Status</span>
+            <div className="text-xs sm:text-sm font-bold font-mono text-emerald-800 mt-0.5 flex items-center gap-1 truncate">
+              <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span className="truncate">Verified Enforced</span>
             </div>
           </div>
-          <ShieldCheck className="w-5 h-5 text-emerald-600" />
+          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 ml-1.5" />
         </div>
       </div>
 
       {/* Timeline Stream */}
-      <div className="p-6 rounded-2xl bg-white border border-[#F5E1E9] shadow-sm space-y-4">
-        <h3 className="text-sm font-bold text-[#29252A] flex items-center gap-2 border-b border-[#F5E1E9] pb-3">
-          <Terminal className="w-4 h-4 text-[#E88DAD]" />
+      <div className="p-3.5 sm:p-4 rounded-xl bg-[#ede8dc] border border-[#d9d0c0] shadow-sm space-y-3">
+        <h3 className="text-xs sm:text-sm font-bold text-[#2c2825] flex items-center gap-2 border-b border-[#d9d0c0] pb-2.5">
+          <Terminal className="w-4 h-4 text-[#10b981]" />
           Autonomous Tool Execution Trace
         </h3>
         <AgentTraceTimeline

@@ -51,8 +51,10 @@ def fetch_graph_overview() -> GraphData:
         for r in rels_res:
             props = r.get("props") or {}
             rel_id = str(r.get("rel_id"))
-            source_id = str(r.get("source_id") or id_map.get(str(r.get("a_int")), ""))
-            target_id = str(r.get("target_id") or id_map.get(str(r.get("b_int")), ""))
+            a_int = str(r.get("a_int"))
+            b_int = str(r.get("b_int"))
+            source_id = id_map.get(a_int) or str(r.get("source_id") or "")
+            target_id = id_map.get(b_int) or str(r.get("target_id") or "")
             edges.append(GraphEdge(
                 id=rel_id,
                 source=source_id,
