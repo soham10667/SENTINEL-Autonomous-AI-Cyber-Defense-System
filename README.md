@@ -1,3 +1,4 @@
+
 # SENTINEL: Autonomous Cyber Defense System
 
 > **Track 1: Agents That Act on Connected Data**  
@@ -100,3 +101,4 @@ pytest -v
 ## 8. License
 
 Developed for the WeMakeDevs &times; FalkorDB Graph Hacks Hackathon (Track 1).
+
