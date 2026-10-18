@@ -30,3 +30,10 @@ ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 .DS_Store
+
+.env
+.env.*
+!.env.example
+node_modules/
+.next/
+.venv/
